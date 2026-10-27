@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>VizDino</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Grotesk:wght@400..700&display=swap">
+<style>
+:root { --ink: #111111; --muted: #6b6b66; --line: #dadad4; --paper: #ffffff; --slide: #fafaf8; }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--paper); color: var(--ink); font-family: 'IBM Plex Sans', Arial, sans-serif; }
+body { overflow: hidden; }
+
+/* passphrase gate */
+#gate { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 16px; }
+#gate form { width: min(420px, 100%); display: flex; flex-direction: column; gap: 20px; }
+#gate .eyebrow { font: 500 13px/1 'IBM Plex Mono', monospace; letter-spacing: 3px; color: var(--muted); margin: 0; }
+#gate h1 { font: 600 64px/0.95 'Space Grotesk', Arial, sans-serif; letter-spacing: -2px; margin: 0; }
+#gate .rule { width: 64px; border: 0; border-top: 2px solid var(--ink); margin: 4px 0; }
+#gate input { font: 400 17px 'IBM Plex Mono', monospace; padding: 14px 0; border: 0; border-bottom: 1px solid var(--ink); background: transparent; color: var(--ink); outline: none; width: 100%; }
+#gate input:focus { border-bottom-width: 2px; padding-bottom: 13px; }
+#gate button { align-self: flex-start; font: 500 13px 'IBM Plex Mono', monospace; letter-spacing: 3px; padding: 14px 28px; background: var(--ink); color: var(--paper); border: 0; cursor: pointer; }
+#gate button:disabled { opacity: 0.5; cursor: wait; }
+#gate .msg { font: 400 14px 'IBM Plex Mono', monospace; color: var(--muted); min-height: 1.4em; margin: 0; }
+
+/* deck */
+#deck { position: fixed; inset: 0; display: none; }
+#deck.on { display: block; }
+#viewport { position: absolute; inset: 0; overflow: hidden; }
+#stage { position: absolute; left: 50%; top: 50%; width: 1920px; height: 1080px; transform-origin: 0 0; }
+#stage > section { position: absolute; inset: 0; width: 1920px; height: 1080px; overflow: hidden; opacity: 0; visibility: hidden; transition: opacity 0.35s ease, visibility 0s linear 0.35s; }
+#stage > section.on { opacity: 1; visibility: visible; transition: opacity 0.35s ease; }
+#stage section aside { display: none; }
+#stage p, #stage h1, #stage h2, #stage h3 { margin: 0; }
+#stage hr { border: 0; margin: 0; }
+#stage b { font-weight: 600; }
+#stage table { border-collapse: collapse; width: 100%; }
+#stage th { font-family: 'IBM Plex Mono', monospace; font-weight: 500; font-size: 0.85em; letter-spacing: 1px; color: #555555; padding: 0 24px 12px 0; border-bottom: 2px solid #111111; vertical-align: bottom; }
+#stage td { padding: 10px 24px 10px 0; border-bottom: 1px solid #dadad4; vertical-align: top; line-height: 1.35; }
+#stage th:last-child, #stage td:last-child { padding-right: 0; }
+#stage video { display: block; cursor: pointer; background: #e9e9e4; }
+#stage img[data-asset] { background: #f1f1ed; }
+x-shape { display: block; }
+x-shape[kind="arrow-right"] { clip-path: polygon(0 36%, calc(100% - 30px) 36%, calc(100% - 30px) 0, 100% 50%, calc(100% - 30px) 100%, calc(100% - 30px) 64%, 0 64%); }
+x-shape[kind="arrow-left"] { clip-path: polygon(30px 0, 30px 36%, 100% 36%, 100% 64%, 30px 64%, 30px 100%, 0 50%); }
+
+/* controls */
+#bar { position: absolute; left: 0; right: 0; bottom: 0; display: flex; align-items: center; gap: 4px; padding: 10px 16px; font: 500 13px 'IBM Plex Mono', monospace; letter-spacing: 1px; color: var(--muted); background: linear-gradient(transparent, rgba(255,255,255,0.92) 40%); opacity: 0; transition: opacity 0.25s; }
+#deck.ui #bar, #bar:hover, #bar:focus-within { opacity: 1; }
+#bar button { font: inherit; letter-spacing: inherit; color: var(--ink); background: transparent; border: 1px solid transparent; padding: 8px 12px; cursor: pointer; }
+#bar button:hover { border-color: var(--line); }
+#bar button[aria-pressed="true"] { border-color: var(--ink); }
+#bar .count { padding: 0 12px; min-width: 7ch; text-align: center; }
+#bar .spacer { flex: 1; }
+#progress { position: absolute; left: 0; top: 0; height: 2px; background: var(--ink); transition: width 0.3s ease; }
+
+#notes { position: absolute; right: 0; top: 0; bottom: 0; width: min(520px, 100%); background: var(--paper); border-left: 1px solid var(--line); padding: 40px 32px 80px; overflow-y: auto; transform: translateX(100%); transition: transform 0.3s ease; font-size: 16px; line-height: 1.6; color: #333333; }
+#notes.on { transform: none; }
+#notes .eyebrow { font: 500 12px 'IBM Plex Mono', monospace; letter-spacing: 3px; color: var(--muted); margin: 0 0 8px; }
+#notes h2 { font: 500 26px/1.15 'Space Grotesk', Arial, sans-serif; color: var(--ink); margin: 0 0 20px; }
+#notes .empty { color: var(--muted); font-style: italic; }
+
+#help { position: absolute; left: 16px; top: 16px; font: 400 12px/1.8 'IBM Plex Mono', monospace; color: var(--muted); background: rgba(255,255,255,0.95); border: 1px solid var(--line); padding: 12px 16px; display: none; }
+#help.on { display: block; }
+</style>
+</head>
+<body>
+<div id="gate">
+  <form autocomplete="off">
+    <p class="eyebrow">VIZDINO · PRIVATE</p>
+    <h1>Proto-D</h1>
+    <hr class="rule">
+    <label for="pass" class="eyebrow">PASSPHRASE</label>
+    <input id="pass" type="password" autocomplete="current-password" spellcheck="false" autofocus>
+    <button type="submit">OPEN</button>
+    <p class="msg" role="status"></p>
+  </form>
+</div>
+
+<div id="deck">
+  <div id="viewport"><div id="stage"></div></div>
+  <div id="progress"></div>
+  <aside id="notes" aria-label="Speaker notes"></aside>
+  <div id="help">← → / space  move<br>N  notes<br>F  full screen<br>Home / End  first / last<br>?  this help</div>
+  <div id="bar">
+    <button id="prev" aria-label="Previous slide">←</button>
+    <span class="count" id="count"></span>
+    <button id="next" aria-label="Next slide">→</button>
+    <span class="spacer"></span>
+    <button id="notesBtn" aria-pressed="false">NOTES</button>
+    <button id="fsBtn">FULL SCREEN</button>
+    <button id="helpBtn" aria-label="Keyboard help">?</button>
+  </div>
+</div>
+
+<script>
+const CONFIG = {"salt": "AWIf2juApoqYM61VI1zFSg==", "iterations": 600000, "deck": "7e142d762c81a02455c94a41138f44dc.bin"};
+
+const enc = new TextEncoder(), dec = new TextDecoder();
+const b64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+
+async function deriveKey(pass) {
+  const base = await crypto.subtle.importKey('raw', enc.encode(pass.normalize('NFC')), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey(
+    { name: 'PBKDF2', hash: 'SHA-256', salt: b64(CONFIG.salt), iterations: CONFIG.iterations },
+    base, { name: 'AES-GCM', length: 256 }, true, ['decrypt']);
+}
+
+async function decryptBytes(key, buf) {
+  const bytes = new Uint8Array(buf);
+  return crypto.subtle.decrypt({ name: 'AES-GCM', iv: bytes.slice(0, 12) }, key, bytes.slice(12));
+}
+
+async function fetchBin(name) {
+  const res = await fetch('data/' + name, { cache: 'no-cache' });
+  if (!res.ok) throw new Error('missing ' + name);
+  return res.arrayBuffer();
+}
+
+// --- asset loading: plain builds read files directly, encrypted builds decrypt into blob URLs
+let KEY = null, ASSETS = {};
+const assetCache = new Map();
+function assetUrl(path) {
+  if (CONFIG.plain) return Promise.resolve(path);
+  if (!assetCache.has(path)) {
+    const a = ASSETS[path];
+    assetCache.set(path, a
+      ? fetchBin(a.f).then(buf => decryptBytes(KEY, buf)).then(pt => URL.createObjectURL(new Blob([pt], { type: a.t })))
+      : Promise.reject(new Error('unknown asset ' + path)));
+  }
+  return assetCache.get(path);
+}
+
+// --- gate
+const gate = document.getElementById('gate'), form = gate.querySelector('form');
+const passEl = document.getElementById('pass'), msg = gate.querySelector('.msg'), btn = gate.querySelector('button');
+
+async function unlockWithKey(key) {
+  const payload = JSON.parse(dec.decode(await decryptBytes(key, await fetchBin(CONFIG.deck))));
+  KEY = key;
+  return payload;
+}
+
+form.addEventListener('submit', async e => {
+  e.preventDefault();
+  if (!passEl.value) return;
+  btn.disabled = true; msg.textContent = 'Unlocking…';
+  try {
+    const key = await deriveKey(passEl.value);
+    const payload = await unlockWithKey(key);
+    try { sessionStorage.setItem('vizdino-key-' + CONFIG.salt, JSON.stringify(await crypto.subtle.exportKey('jwk', key))); } catch (_) {}
+    start(payload);
+  } catch (err) {
+    msg.textContent = err.name === 'OperationError' ? 'Wrong passphrase.' : 'Could not load the deck (' + err.message + ').';
+    btn.disabled = false; passEl.select();
+  }
+});
+
+(async () => {
+  if (CONFIG.plain) {
+    const res = await fetch('deck.json', { cache: 'no-cache' });
+    return start(await res.json());
+  }
+  let jwk = null;
+  try { jwk = JSON.parse(sessionStorage.getItem('vizdino-key-' + CONFIG.salt)); } catch (_) {}
+  if (!jwk) return;
+  try {
+    const key = await crypto.subtle.importKey('jwk', jwk, { name: 'AES-GCM' }, true, ['decrypt']);
+    start(await unlockWithKey(key));
+  } catch (_) { try { sessionStorage.removeItem('vizdino-key-' + CONFIG.salt); } catch (__) {} }
+})();
+
+// --- deck
+const deckEl = document.getElementById('deck'), stage = document.getElementById('stage');
+const notesEl = document.getElementById('notes'), countEl = document.getElementById('count');
+let slides = [], current = -1, uiTimer = 0;
+
+function start(payload) {
+  ASSETS = payload.assets || {};
+  document.title = payload.title;
+  // keep assets out of the DOM until a slide needs them
+  stage.innerHTML = payload.slides.join('\n')
+    .replace(/\ssrc="(assets\/[^"]+)"/g, ' data-asset="$1"');
+  slides = [...stage.children].filter(n => n.tagName === 'SECTION');
+  gate.remove();
+  deckEl.classList.add('on');
+  fit();
+  const fromHash = slides.findIndex(s => '#' + s.id === location.hash);
+  go(fromHash >= 0 ? fromHash : 0, true);
+  showUi();
+}
+
+function fit() {
+  const vw = innerWidth, vh = innerHeight, s = Math.min(vw / 1920, vh / 1080);
+  stage.style.transform = `scale(${s}) translate(-50%, -50%)`;
+}
+
+function hydrate(i) {
+  const s = slides[i];
+  if (!s || s.dataset.ready) return;
+  s.dataset.ready = '1';
+  s.querySelectorAll('img[data-asset]').forEach(img => {
+    const poster = img.dataset.asset, video = img.dataset.video;
+    if (video) {
+      const v = document.createElement('video');
+      v.setAttribute('style', img.getAttribute('style') || '');
+      v.title = img.alt; v.setAttribute('aria-label', img.alt);
+      v.muted = true; v.loop = true; v.playsInline = true; v.preload = 'auto';
+      v.addEventListener('click', () => v.paused ? v.play() : v.pause());
+      img.replaceWith(v);
+      assetUrl(poster).then(u => { v.poster = u; });
+      assetUrl(video).then(u => { v.src = u; if (s.classList.contains('on')) v.play().catch(() => {}); });
+    } else {
+      assetUrl(poster).then(u => { img.src = u; img.removeAttribute('data-asset'); });
+    }
+  });
+}
+
+function go(i, instant) {
+  i = Math.max(0, Math.min(slides.length - 1, i));
+  if (i === current) return;
+  const prev = slides[current];
+  if (prev) {
+    prev.classList.remove('on');
+    prev.querySelectorAll('video').forEach(v => v.pause());
+  }
+  current = i;
+  const s = slides[i];
+  if (instant) s.style.transition = 'none';
+  s.classList.add('on');
+  if (instant) requestAnimationFrame(() => { s.style.transition = ''; });
+  [i, i + 1, i - 1, i + 2].forEach(hydrate);
+  s.querySelectorAll('video').forEach(v => { if (v.src) v.play().catch(() => {}); });
+  countEl.textContent = `${String(i + 1).padStart(2, '0')} / ${slides.length}`;
+  document.getElementById('progress').style.width = `${(i + 1) / slides.length * 100}%`;
+  history.replaceState(null, '', '#' + s.id);
+  renderNotes();
+}
+
+function renderNotes() {
+  const s = slides[current], aside = s.querySelector('aside');
+  const title = s.querySelector('h1, h2');
+  notesEl.innerHTML = '';
+  const eb = document.createElement('p'); eb.className = 'eyebrow'; eb.textContent = `NOTES · ${current + 1}`;
+  const h = document.createElement('h2'); h.textContent = title ? title.textContent : '';
+  const body = document.createElement('div');
+  if (aside) body.innerHTML = aside.innerHTML; else { body.className = 'empty'; body.textContent = 'No notes for this slide.'; }
+  notesEl.append(eb, h, body);
+  notesEl.scrollTop = 0;
+}
+
+function toggleNotes(force) {
+  const on = force === undefined ? notesEl.classList.toggle('on') : notesEl.classList.toggle('on', force);
+  document.getElementById('notesBtn').setAttribute('aria-pressed', on);
+}
+
+function toggleFs() {
+  if (document.fullscreenElement) document.exitFullscreen();
+  else document.documentElement.requestFullscreen?.().catch(() => {});
+}
+
+function showUi() {
+  deckEl.classList.add('ui');
+  clearTimeout(uiTimer);
+  uiTimer = setTimeout(() => deckEl.classList.remove('ui'), 2200);
+}
+
+addEventListener('resize', fit);
+addEventListener('mousemove', () => slides.length && showUi());
+addEventListener('hashchange', () => {
+  const i = slides.findIndex(s => '#' + s.id === location.hash);
+  if (i >= 0) go(i);
+});
+addEventListener('keydown', e => {
+  if (!slides.length || e.ctrlKey || e.metaKey || e.altKey) return;
+  const k = e.key;
+  if (['ArrowRight', 'ArrowDown', 'PageDown', ' '].includes(k)) { e.preventDefault(); go(current + (e.shiftKey && k === ' ' ? -1 : 1)); }
+  else if (['ArrowLeft', 'ArrowUp', 'PageUp', 'Backspace'].includes(k)) { e.preventDefault(); go(current - 1); }
+  else if (k === 'Home') go(0);
+  else if (k === 'End') go(slides.length - 1);
+  else if (k === 'n' || k === 'N') toggleNotes();
+  else if (k === 'f' || k === 'F') toggleFs();
+  else if (k === '?') document.getElementById('help').classList.toggle('on');
+  else if (k === 'Escape') { toggleNotes(false); document.getElementById('help').classList.remove('on'); }
+});
+document.getElementById('prev').onclick = () => go(current - 1);
+document.getElementById('next').onclick = () => go(current + 1);
+document.getElementById('notesBtn').onclick = () => toggleNotes();
+document.getElementById('fsBtn').onclick = toggleFs;
+document.getElementById('helpBtn').onclick = () => document.getElementById('help').classList.toggle('on');
+
+// swipe on touch screens
+let touchX = null;
+addEventListener('touchstart', e => { touchX = e.touches[0].clientX; showUi(); }, { passive: true });
+addEventListener('touchend', e => {
+  if (touchX === null || !slides.length) return;
+  const dx = e.changedTouches[0].clientX - touchX; touchX = null;
+  if (Math.abs(dx) > 50 && !notesEl.contains(e.target)) go(current + (dx < 0 ? 1 : -1));
+}, { passive: true });
+</script>
+</body>
+</html>
